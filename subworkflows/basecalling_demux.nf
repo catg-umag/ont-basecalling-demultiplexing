@@ -1,18 +1,16 @@
 workflow BasecallingAndDemux {
   take:
     sample_names  // channel [barcode, sample]
-    data_dir      // directory containing POD5/FAST5 files
+    data_dir      // directory containing POD5 files
 
   main:
-    basecalling(data_dir)
+    basecalling(
+      data_dir,
+      downloadModel(params.dorado_basecalling_model).out
+    )
 
-    basecalling.out.fastq_pass
-      | mix(basecalling.out.fastq_fail)
-      | map { [it.simpleName, it] }
-      | set { sequences_to_merge }
-
-    if (params.skip_demultiplexing) {
-      mergeSequences(sequences_to_merge)
+    if (params.skip_demultiplexing && params.fastq_output) {
+      bamToFastq(basecalling.out.bam_pass)
     } else {
       demultiplexing(basecalling.out.fastq_pass)
 
@@ -36,40 +34,61 @@ workflow BasecallingAndDemux {
 }
 
 
+process downloadModel {
+  label 'dorado'
+
+  input:
+  val(model_name)
+  
+  output:
+  path(model_name)
+  
+  script:
+  """
+  dorado download --model ${model_name}
+  """
+}
+
+
 process basecalling {
-  label 'guppy'
-  publishDir "${params.output_dir}/guppy_info/", \
-    pattern: 'basecalled/sequencing_summary.txt', \
-    saveAs: { 'sequencing_summary.txt' }, \
+  label 'dorado'
+  publishDir "${params.output_dir}/sequencing_info/", \
+    pattern: 'sequencing_summary.txt', \
     mode: 'copy'
-  clusterOptions = "--gres=gpu:${params.guppy_basecalling_gpus}"
-  cpus params.guppy_basecalling_cpus
+  publishDir "${params.output_dir}/bam/", \
+    pattern: 'basecalled_pass.bam', \
+    mode: 'copy', \
+    enabled: { params.skip_demultiplexing && !params.fastq_output }
+  clusterOptions = "--gres=gpu:${params.dorado_basecalling_gpus}"
+  cpus params.dorado_basecalling_gpus
   
   input:
   path(data_dir)
+  path(basecalling_model)
 
   output:
-  path('basecalled/pass'), emit: fastq_pass
-  path('basecalled/fail'), emit: fastq_fail
-  path('basecalled/sequencing_summary.txt'), emit: sequencing_summary
+  tuple val('basecalled_pass'), path('basecalled_pass.bam'), emit: bam_pass
+  path('sequencing_summary.txt'), emit: sequencing_summary
 
   script:
   """
-  guppy_basecaller \
-    --input_path ${data_dir} \
-    --save_path basecalled \
-    --config ${params.guppy_basecalling_config} \
+  dorado basecaller \
+    --min-qscore ${params.dorado_basecalling_min_qscore} \
     --recursive \
     --device 'cuda:all' \
-    --num_callers ${task.cpus} \
-    ${params.guppy_basecalling_extra_config}
+    ${params.guppy_basecalling_extra_config} \
+    ${model} \
+    ${data_dir} \
+  > basecalled_pass.bam
+
+  dorado summary basecalled_pass.bam > sequencing_summary.txt
   """
 }
 
 
 process demultiplexing {
-  label 'guppy'
-  publishDir "${params.output_dir}/guppy_info/", \
+  label 'dorado'
+  publishDir "${params.output_dir}/sequencing_info/", \
     pattern: 'demultiplexed/barcoding_summary.txt', \
     saveAs: { 'barcoding_summary.txt' }, \
     mode: 'copy'
@@ -137,5 +156,24 @@ process compressSequences {
   script:
   """
   pigz -p ${task.cpus} -c ${fastq} > ${name}.fastq.gz
+  """
+}
+
+
+process bamToFastq {
+  label 'samtools'
+  tag "${name}"
+  publishDir "${params.output_dir}/fastq/", mode: 'copy'
+  cpus 4
+
+  input:
+  tuple val(name), path(bam)
+
+  output:
+  tuple val(name), path("${name}.fastq.gz")
+
+  script:
+  """
+  samtools fastq -@ ${task.cpus} -0 ${name}.fastq.gz ${bam}
   """
 }
