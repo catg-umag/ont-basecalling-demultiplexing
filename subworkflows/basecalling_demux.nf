@@ -6,11 +6,16 @@ workflow BasecallingAndDemux {
   main:
     basecalling(
       data_dir,
-      downloadModel(params.dorado_basecalling_model).out
+      downloadModel(params.dorado_basecalling_model)
     )
 
-    if (params.skip_demultiplexing && params.fastq_output) {
-      bamToFastq(basecalling.out.bam_pass)
+    if (params.skip_demultiplexing) {
+      if (params.fastq_output) {
+        bamToFastq(basecalling.out.reads_pass)
+          | set { sequences_to_postprocess }
+      } else {
+        sequences_to_postprocess = basecalling.out.reads_pass
+      }
     } else {
       demultiplexing(basecalling.out.reads_pass)
 
@@ -52,7 +57,7 @@ process basecalling {
   publishDir "${params.output_dir}/sequencing_info/", \
     pattern: 'sequencing_summary.txt', \
     mode: 'copy'
-  publishDir "${params.output_dir}/bam/", \
+  publishDir "${params.output_dir}/basecalled/", \
     pattern: 'basecalled_pass.bam', \
     mode: 'copy', \
     enabled: params.skip_demultiplexing && !params.fastq_output
@@ -73,8 +78,8 @@ process basecalling {
     --min-qscore ${params.dorado_basecalling_min_qscore} \
     --recursive \
     --device 'cuda:all' \
-    ${params.guppy_basecalling_extra_config} \
-    ${model} \
+    ${params.dorado_basecalling_extra_config} \
+    ${basecalling_model} \
     ${data_dir} \
   > basecalled_pass.bam
 
@@ -88,11 +93,11 @@ process demultiplexing {
   cpus params.dorado_demux_cpus
 
   input:
-  path(basecalled_reads)
+  tuple val(name), path(basecalled_reads)
 
   output:
-  path('demultiplexed/*barcode*')                , emit: classified
-  path('demultiplexed/unclassified*', arity: '1'), emit: unclassified
+  path('demultiplexed/*barcode*')    , emit: classified
+  path('demultiplexed/unclassified*'), emit: unclassified
 
   script:
   both_ends = params.dorado_demux_both_ends ? '--barcode-both-ends' : ''
@@ -102,7 +107,7 @@ process demultiplexing {
     --output-dir demultiplexed/ \
     --kit-name "${params.dorado_demux_kit}" \
     ${both_ends} \
-    ${emit-fastq} \
+    ${emit_fastq} \
     --threads ${task.cpus} \
     ${params.dorado_demux_extra_config} \
     ${basecalled_reads}
@@ -120,7 +125,7 @@ process gatherSequences {
   tuple val(name), path(reads)
   
   output:
-  tuple val(name), path("${name}.{fastq.gz,bam}", arity: '1')
+  tuple val(name), path("${name}.{fastq.gz,bam}")
   
   script:
   if (params.fastq_output)
@@ -137,7 +142,7 @@ process gatherSequences {
 process bamToFastq {
   label 'samtools'
   tag "${name}"
-  publishDir "${params.output_dir}/fastq/", mode: 'copy'
+  publishDir "${params.output_dir}/basecalled/", mode: 'copy'
   cpus 4
 
   input:

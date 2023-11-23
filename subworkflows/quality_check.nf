@@ -27,14 +27,13 @@ process fastQC {
   label 'fastqc'
   tag "${name}"
   publishDir "${params.output_dir}/qc/fastqc", mode: 'copy'
-  cpus { 8 * task.attempt }
-  memory { 16.GB * task.attempt }
-  time '30m'
+  cpus { 4 * task.attempt }
+  memory { 8.GB * task.attempt }
   errorStrategy 'retry'
   maxRetries 3
 
   input:
-  tuple val(name), path(fastq)
+  tuple val(name), path(reads)
 
   output:
   tuple val(name), path("fastqc_${name}")
@@ -42,7 +41,10 @@ process fastQC {
   script:
   """
   mkdir fastqc_${name}
-  fastqc ${fastq} -o fastqc_${name} -t ${task.cpus}
+  fastqc \
+    ${reads} \
+    -o fastqc_${name} \
+    -t ${task.cpus} --memory ${task.memory.toGiga()}GB
   """
 }
 
@@ -54,15 +56,16 @@ process nanoPlot {
   cpus 4
 
   input:
-  tuple val(name), path(fastq)
+  tuple val(name), path(reads)
 
   output:
   tuple val(name), path("nanoplot_${name}")
 
   script:
+  file_opt = reads.name.endsWith('.bam') ? '--ubam' : '--fastq'
   """
   NanoPlot \
-    --fastq ${fastq} \
+    ${file_opt} ${reads} \
     --outdir nanoplot_${name} \
     --prefix ${name}_ \
     --threads ${task.cpus}
