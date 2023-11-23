@@ -12,25 +12,22 @@ workflow BasecallingAndDemux {
     if (params.skip_demultiplexing && params.fastq_output) {
       bamToFastq(basecalling.out.bam_pass)
     } else {
-      demultiplexing(basecalling.out.fastq_pass)
+      demultiplexing(basecalling.out.reads_pass)
 
       demultiplexing.out.classified
-        | flatMap { it.collect { x -> [x.simpleName, x] } }
+        | flatMap { it.collect { x -> [(x.name =~ /barcode[0-9]+/)[0], x] } }
         | join(sample_names)
         | map { [it[2], it[1]] }
+        | gatherSequences
+
+      gatherSequences.out
         | mix(demultiplexing.out.unclassified.map { ['unclassified', it] })
-        | mix(sequences_to_merge)
-        | mergeSequences
-        | filter { !['unclassified', 'pass', 'fail'].contains(it[0]) }
-        | compressSequences
+        | set { sequences_to_postprocess }
     }
 
   emit:
-    sequences = mergeSequences.out
+    sequences = sequences_to_postprocess
     sequencing_summary = basecalling.out.sequencing_summary
-    barcoding_summary = params.skip_demultiplexing 
-      ? file('NO_FILE')
-      : demultiplexing.out.barcoding_summary
 }
 
 
@@ -58,7 +55,7 @@ process basecalling {
   publishDir "${params.output_dir}/bam/", \
     pattern: 'basecalled_pass.bam', \
     mode: 'copy', \
-    enabled: { params.skip_demultiplexing && !params.fastq_output }
+    enabled: params.skip_demultiplexing && !params.fastq_output
   clusterOptions = "--gres=gpu:${params.dorado_basecalling_gpus}"
   cpus params.dorado_basecalling_gpus
   
@@ -67,8 +64,8 @@ process basecalling {
   path(basecalling_model)
 
   output:
-  tuple val('basecalled_pass'), path('basecalled_pass.bam'), emit: bam_pass
-  path('sequencing_summary.txt'), emit: sequencing_summary
+  tuple val('basecalled_pass'), path('basecalled_pass.bam'), emit: reads_pass
+  path('sequencing_summary.txt')                           , emit: sequencing_summary
 
   script:
   """
@@ -88,75 +85,52 @@ process basecalling {
 
 process demultiplexing {
   label 'dorado'
-  publishDir "${params.output_dir}/sequencing_info/", \
-    pattern: 'demultiplexed/barcoding_summary.txt', \
-    saveAs: { 'barcoding_summary.txt' }, \
-    mode: 'copy'
-  cpus params.guppy_barcoding_cpus
+  cpus params.dorado_demux_cpus
 
   input:
-  path(fastq_dir)
+  path(basecalled_reads)
 
   output:
-  path('demultiplexed/barcode*'), emit: classified
-  path('demultiplexed/unclassified'), emit: unclassified
-  path('demultiplexed/barcoding_summary.txt'), emit: barcoding_summary
+  path('demultiplexed/*barcode*')                , emit: classified
+  path('demultiplexed/unclassified*', arity: '1'), emit: unclassified
 
   script:
-  both_ends = params.guppy_barcoding_both_ends ? '--require_barcodes_both_ends' : ''
+  both_ends = params.dorado_demux_both_ends ? '--barcode-both-ends' : ''
+  emit_fastq = params.fastq_output ? '--emit-fastq' : ''
   """
-  guppy_barcoder \
-    --input_path ${fastq_dir} \
-    --save_path demultiplexed/ \
-    --recursive \
-    --barcode_kits "${params.guppy_barcoding_kits}" \
+  dorado demux \
+    --output-dir demultiplexed/ \
+    --kit-name "${params.dorado_demux_kit}" \
     ${both_ends} \
-    --enable_trim_barcodes \
-    --detect_adapter \
-    --detect_barcodes \
-    --worker_threads ${task.cpus} \
-    ${params.guppy_barcoding_extra_config}
+    ${emit-fastq} \
+    --threads ${task.cpus} \
+    ${params.dorado_demux_extra_config} \
+    ${basecalled_reads}
   """
 }
 
 
-process mergeSequences {
-  label 'linux'
-  publishDir "${params.output_dir}/basecalled/", \
-    pattern: '*.fastq', \
-    mode: 'copy', \
-    enabled: params.skip_demultiplexing
-  tag "${name}"
-
-  input:
-  tuple val(name), path(fastq_dir)
-
-  output:
-  tuple val(name), path("${name}.fastq")
-
-  script:
-  """
-  cat ${fastq_dir}/*.fastq > ${name}.fastq
-  """
-}
-
-
-process compressSequences {
+process gatherSequences {
   label 'pigz'
   tag "${name}"
-  publishDir "${params.output_dir}/fastq/", mode: 'copy'
+  publishDir "${params.output_dir}/demux/", mode: 'copy'
   cpus 4
 
   input:
-  tuple val(name), path(fastq)
+  tuple val(name), path(reads)
   
   output:
-  tuple val(name), path("${name}.fastq.gz")
+  tuple val(name), path("${name}.{fastq.gz,bam}", arity: '1')
   
   script:
-  """
-  pigz -p ${task.cpus} -c ${fastq} > ${name}.fastq.gz
-  """
+  if (params.fastq_output)
+    """
+    pigz -p ${task.cpus} -c ${reads} > ${name}.fastq.gz
+    """
+  else
+    """
+    cp ${reads} ${name}.bam
+    """
 }
 
 

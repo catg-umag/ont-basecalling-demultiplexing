@@ -28,7 +28,6 @@ workflow {
   QualityCheck(
     BasecallingAndDemux.out.sequences,
     BasecallingAndDemux.out.sequencing_summary,
-    BasecallingAndDemux.out.barcoding_summary,
     multiqc_config
   )
 }

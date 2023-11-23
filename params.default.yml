@@ -8,7 +8,7 @@ dorado_basecalling_min_qscore: 10
 dorado_basecalling_extra_config: ''
 dorado_basecalling_gpus: 2
 skip_demultiplexing: false
-dorado_barcoding_kits: EXP-NBD196
-dorado_barcoding_both_ends: false
-dorado_barcoding_extra_config: ''
-dorado_barcoding_cpus: 24
+dorado_demux_kit: EXP-NBD196
+dorado_demux_both_ends: false
+dorado_demux_extra_config: ''
+dorado_demux_cpus: 24

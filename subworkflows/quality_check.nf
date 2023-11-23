@@ -3,15 +3,14 @@ include { sanitizeFilename } from '../lib/groovy/utils.gvy'
 
 workflow QualityCheck {
   take:
-    fastq_files         // channel [name, fastq]
+    sequences         // channel [name, fastq]
     sequencing_summary  // sequencing summary file
-    barcoding_summary   // barcoding summary file
     multiqc_config      // multiqc config file
 
   main:
-    pycoQC(sequencing_summary, barcoding_summary)
+    pycoQC(sequencing_summary)
 
-    fastq_files
+    sequences
       | (fastQC & nanoPlot)
       | mix
       | map { it[1] }
@@ -80,7 +79,6 @@ process pycoQC {
 
   input:
   path(sequencing_summary)
-  path(barcoding_summary)
   
   output:
   path('pycoQC_report.html')
@@ -89,13 +87,9 @@ process pycoQC {
   title_opt = params.experiment_name
     ? "--report_title '${params.experiment_name} Sequencing Report'"
     : ''
-  barcoding_opt = barcoding_summary.name != 'NO_FILE'
-    ? "-b ${barcoding_summary}"
-    : ''
   """
   pycoQC \
     -f ${sequencing_summary} \
-    ${barcoding_opt} \
     ${title_opt} \
     -o pycoQC_report.html
   """
