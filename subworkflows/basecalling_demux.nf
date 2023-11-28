@@ -62,7 +62,8 @@ process basecalling {
     mode: 'copy', \
     enabled: params.skip_demultiplexing && !params.fastq_output
   clusterOptions = "--gres=gpu:${params.dorado_basecalling_gpus}"
-  cpus params.dorado_basecalling_gpus
+  cpus { 4 * params.dorado_basecalling_gpus }
+  memory "${16 * params.dorado_basecalling_gpus}G"
   
   input:
   path(data_dir)
