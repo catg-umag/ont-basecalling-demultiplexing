@@ -4,20 +4,22 @@ workflow BasecallingAndDemux {
     data_dir      // directory containing POD5 files
 
   main:
-    basecalling(
-      data_dir,
-      downloadModel(params.dorado_basecalling_model)
-    )
+    basecalling(data_dir, downloadModel(params.dorado_basecalling_model))
+      | qscoreFiltering
 
     if (params.skip_demultiplexing) {
+      qscoreFiltering.out
+        | mix
+        | set { reads }
+
       if (params.fastq_output) {
-        bamToFastq(basecalling.out.reads_pass)
+        bamToFastq(reads)
           | set { sequences_to_postprocess }
       } else {
-        sequences_to_postprocess = basecalling.out.reads_pass
+        sequences_to_postprocess = reads
       }
     } else {
-      demultiplexing(basecalling.out.reads_pass)
+      demultiplexing(qscoreFiltering.out.reads_pass)
 
       demultiplexing.out.classified
         | flatMap { it.collect { x -> [(x.name =~ /barcode[0-9]+/)[0], x] } }
@@ -57,10 +59,6 @@ process basecalling {
   publishDir "${params.output_dir}/sequencing_info/", \
     pattern: 'sequencing_summary.txt', \
     mode: 'copy'
-  publishDir "${params.output_dir}/basecalled/", \
-    pattern: 'basecalled_pass.bam', \
-    mode: 'copy', \
-    enabled: params.skip_demultiplexing && !params.fastq_output
   clusterOptions = "--gres=gpu:${params.dorado_basecalling_gpus}"
   cpus { 4 * params.dorado_basecalling_gpus }
   memory "${16 * params.dorado_basecalling_gpus}G"
@@ -70,21 +68,47 @@ process basecalling {
   path(basecalling_model)
 
   output:
-  tuple val('basecalled_pass'), path('basecalled_pass.bam'), emit: reads_pass
-  path('sequencing_summary.txt')                           , emit: sequencing_summary
+  tuple val('basecalled'), path('basecalled.ubam'), emit: reads
+  path('sequencing_summary.txt')                  , emit: sequencing_summary
 
   script:
   """
   dorado basecaller \
-    --min-qscore ${params.dorado_basecalling_min_qscore} \
     --recursive \
     --device 'cuda:all' \
     ${params.dorado_basecalling_extra_config} \
     ${basecalling_model} \
     ${data_dir} \
-  > basecalled_pass.bam
+  > basecalled.ubam
 
-  dorado summary basecalled_pass.bam > sequencing_summary.txt
+  dorado summary basecalled.ubam > sequencing_summary.txt
+  """
+}
+
+
+process qscoreFiltering {
+  label 'samtools'
+  publishDir "${params.output_dir}/basecalled/", \
+    pattern: '*.bam', \
+    mode: 'copy', \
+    enabled: params.skip_demultiplexing && !params.fastq_output
+  cpus 4
+
+  input:
+  tuple val(name), path(ubam)
+  
+  output:
+  tuple val('reads_pass'), path('*.pass.ubam'), emit: reads_pass
+  tuple val('reads_fail'), path('*.fail.ubam'), emit: reads_fail
+  
+  script:
+  """
+  samtools view \
+    -e '[qs] >= ${params.qscore_filter}' ${ubam} \
+    --output ${reads.baseName}.pass.ubam \
+    --unoutput ${reads.baseName}.fail.ubam \
+    --bam \
+    --threads ${task.cpus} 
   """
 }
 

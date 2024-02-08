@@ -3,7 +3,7 @@ include { sanitizeFilename } from '../lib/groovy/utils.gvy'
 
 workflow QualityCheck {
   take:
-    sequences         // channel [name, fastq]
+    sequences           // channel [name, fastq]
     sequencing_summary  // sequencing summary file
     multiqc_config      // multiqc config file
 
