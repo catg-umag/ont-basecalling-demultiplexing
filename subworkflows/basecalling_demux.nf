@@ -4,20 +4,24 @@ workflow BasecallingAndDemux {
     data_dir      // directory containing POD5 files
 
   main:
-    basecalling(data_dir, downloadModel(params.dorado_basecalling_model))
-      | qscoreFiltering
+    basecalling(
+      data_dir,
+      downloadModel(params.dorado_basecalling_model)
+    )
+    qscoreFiltering(basecalling.out.reads)
+      | mix
+      | set { basecalled_reads_qscore_filtered }
+
+    if (params.fastq_output) {
+      basecalled_reads_qscore_filtered
+        | bamToFastq
+        | set { basecalled_reads }
+    } else {
+      basecalled_reads = basecalled_reads_qscore_filtered
+    }
 
     if (params.skip_demultiplexing) {
-      qscoreFiltering.out
-        | mix
-        | set { reads }
-
-      if (params.fastq_output) {
-        bamToFastq(reads)
-          | set { sequences_to_postprocess }
-      } else {
-        sequences_to_postprocess = reads
-      }
+      sequences_to_postprocess = basecalled_reads
     } else {
       demultiplexing(qscoreFiltering.out.reads_pass)
 
@@ -29,6 +33,7 @@ workflow BasecallingAndDemux {
 
       gatherSequences.out
         | mix(demultiplexing.out.unclassified.map { ['unclassified', it] })
+        | mix(basecalled_reads)
         | set { sequences_to_postprocess }
     }
 
@@ -105,8 +110,8 @@ process qscoreFiltering {
   """
   samtools view \
     -e '[qs] >= ${params.qscore_filter}' ${ubam} \
-    --output ${reads.baseName}.pass.ubam \
-    --unoutput ${reads.baseName}.fail.ubam \
+    --output ${ubam.baseName}.pass.ubam \
+    --unoutput ${ubam.baseName}.fail.ubam \
     --bam \
     --threads ${task.cpus} 
   """
@@ -178,6 +183,6 @@ process bamToFastq {
 
   script:
   """
-  samtools fastq -@ ${task.cpus} -0 ${name}.fastq.gz ${bam}
+  samtools fastq -T '*' -@ ${task.cpus} -0 ${name}.fastq.gz ${bam}
   """
 }

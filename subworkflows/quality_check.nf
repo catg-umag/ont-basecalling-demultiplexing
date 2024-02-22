@@ -5,7 +5,6 @@ workflow QualityCheck {
   take:
     sequences           // channel [name, fastq]
     sequencing_summary  // sequencing summary file
-    multiqc_config      // multiqc config file
 
   main:
     pycoQC(sequencing_summary)
@@ -15,11 +14,10 @@ workflow QualityCheck {
       | mix
       | map { it[1] }
       | collect
-      | multiMap {
-          reports: it
-          multiqc_config: multiqc_config
-        }
-      | multiQC
+      | set { reports }
+
+  emit:
+    software_reports = reports
 }
 
 
@@ -62,7 +60,7 @@ process nanoPlot {
   tuple val(name), path("nanoplot_${name}")
 
   script:
-  file_opt = reads.name.endsWith('.bam') ? '--ubam' : '--fastq'
+  file_opt = reads.name.endsWith('.ubam') ? '--ubam' : '--fastq'
   """
   NanoPlot \
     ${file_opt} ${reads} \
@@ -99,25 +97,3 @@ process pycoQC {
 }
 
 
-process multiQC {
-  label 'multiqc'
-  publishDir "${params.output_dir}/qc/multiqc", mode: 'copy'
-  
-  input:
-  path(reports, stageAs: 'reports/*')
-  path('multiqc_config.yaml')
-
-  output:
-  tuple path('*multiqc_data'), path('*multiqc*.html')
-
-  script:
-  if (params.experiment_name) {
-    filename = sanitizeFilename("${params.experiment_name}_multiqc")
-    title_opts = "--title '${params.experiment_name} Report' --filename ${filename}"
-  } else {
-    title_opts = ''
-  }
-  """
-  multiqc ${title_opts} reports
-  """
-}

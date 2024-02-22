@@ -7,6 +7,8 @@ addDefaultParamValues(params, "${workflow.projectDir}/params.default.yml")
 
 include { BasecallingAndDemux } from './subworkflows/basecalling_demux.nf'
 include { QualityCheck }        from './subworkflows/quality_check.nf'
+include { GenerateReports }     from './subworkflows/reports.nf'
+include { CollectVersions }     from './subworkflows/versions.nf'
 
 
 // check and prepare input channels
@@ -25,9 +27,18 @@ if (params.skip_demultiplexing) {
 
 workflow {
   BasecallingAndDemux(sample_names, data_dir)
+
   QualityCheck(
     BasecallingAndDemux.out.sequences,
-    BasecallingAndDemux.out.sequencing_summary,
+    BasecallingAndDemux.out.sequencing_summary
+  )
+
+  CollectVersions()
+
+  GenerateReports(
+    QualityCheck.out.software_reports,
+    CollectVersions.out.software_versions,
+    CollectVersions.out.model_versions,
     multiqc_config
   )
 }

@@ -1,6 +1,17 @@
 read_count_multiplier: 0.001
 read_count_prefix: "K"
 read_count_desc: "thousands"
+custom_data:
+  model_versions:
+    file_format: "tsv"
+    section_name: "Software Model Versions"
+    plot_type: "table"
+sp:
+  model_versions:
+    fn: "model_versions_*"
+report_section_order:
+  model_versions:
+    before: "multiqc_software_versions"
 sample_names_replace:
   pass: .all_pass
   fail: .all_fail
