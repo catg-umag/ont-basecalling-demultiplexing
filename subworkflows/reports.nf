@@ -1,3 +1,6 @@
+include { sanitizeFilename } from '../lib/groovy/utils.gvy'
+
+
 workflow GenerateReports {
   take:
     software_reports    // channel [file] | SW reports
