@@ -1,19 +1,15 @@
 #!/usr/bin/env nextflow
-include { addDefaultParamValues; pathCheck } from './lib/groovy/utils.gvy'
-
-// load default parameters from YAML
-addDefaultParamValues(params, "${workflow.projectDir}/params.default.yml")
-
-
 include { BasecallingAndDemux } from './subworkflows/basecalling_demux.nf'
 include { QualityCheck }        from './subworkflows/quality_check.nf'
 include { GenerateReports }     from './subworkflows/reports.nf'
 include { CollectVersions }     from './subworkflows/versions.nf'
 
+include { pathCheck } from './lib/groovy/utils.gvy'
+
 
 // check and prepare input channels
 data_dir = pathCheck(params.data_dir, isDirectory = true)
-multiqc_config = pathCheck("${workflow.projectDir}/conf/multiqc_config.yaml")
+multiqc_config = pathCheck("${workflow.projectDir}/tool_conf/multiqc_config.yaml")
 
 if (params.skip_demultiplexing) {
   sample_names = channel.fromList([])
