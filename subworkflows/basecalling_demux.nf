@@ -4,10 +4,8 @@ workflow BasecallingAndDemux {
     data_dir      // directory containing POD5 files
 
   main:
-    basecalling(
-      data_dir,
-      downloadModel(params.dorado_basecalling_model)
-    )
+    basecalling(data_dir)
+    getBasecallingModel(basecalling.out.reads)
     qscoreFiltering(basecalling.out.reads)
       | mix
       | set { basecalled_reads_qscore_filtered }
@@ -43,22 +41,6 @@ workflow BasecallingAndDemux {
 }
 
 
-process downloadModel {
-  label 'dorado'
-
-  input:
-  val(model_name)
-  
-  output:
-  path(model_name)
-  
-  script:
-  """
-  dorado download --model ${model_name}
-  """
-}
-
-
 process basecalling {
   label 'dorado'
   publishDir "${params.output_dir}/sequencing_info/", \
@@ -70,19 +52,22 @@ process basecalling {
   
   input:
   path(data_dir)
-  path(basecalling_model)
 
   output:
-  tuple val('basecalled'), path('basecalled.ubam'), emit: reads
-  path('sequencing_summary.txt')                  , emit: sequencing_summary
+  tuple val('basecalled'), path('basecalled.ubam')  , emit: reads
+  path('sequencing_summary.txt')                    , emit: sequencing_summary
+  tuple val('Dorado'), eval('dorado --version 2>&1'), topic: versions
 
   script:
+  kit_opt = params.skip_demultiplexing ? '' : "--kit-name ${params.dorado_demux_kit}"
   """
   dorado basecaller \
     --recursive \
     --device 'cuda:all' \
+    --trim adapters \
+    ${kit_opt} \
     ${params.dorado_basecalling_extra_config} \
-    ${basecalling_model} \
+    ${model_name} \
     ${data_dir} \
   > basecalled.ubam
 
@@ -105,6 +90,7 @@ process qscoreFiltering {
   output:
   tuple val('reads_pass'), path('*.pass.ubam'), emit: reads_pass
   tuple val('reads_fail'), path('*.fail.ubam'), emit: reads_fail
+  tuple val('Samtools'), eval('samtools --version | head -n 1 | grep -Eo "[0-9.]+"'), topic: versions
   
   script:
   """
@@ -184,5 +170,21 @@ process bamToFastq {
   script:
   """
   samtools fastq -T '*' -@ ${task.cpus} -0 ${name}.fastq.gz ${bam}
+  """
+}
+
+
+process getBasecallingModel {
+  label 'samtools'
+
+  input:
+  path(bam)
+  
+  output:
+  tuple val('Dorado'), val('basecall'), stdout, topic: models
+  
+  script:
+  """
+  samtools view -H ${bam} | grep -Po '(?<=basecall_model=)([^ ]+)'
   """
 }

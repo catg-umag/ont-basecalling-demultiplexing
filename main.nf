@@ -15,10 +15,11 @@ if (params.skip_demultiplexing) {
   sample_names = channel.fromList([])
 } else {
   pathCheck(params.sample_data)
-  sample_names = channel
+  channel
     .fromPath(params.sample_data)
     .splitCsv(header: true)
     .map { row -> [row.barcode, row.sample] }
+    .set { sample_names }
 }
 
 workflow {
@@ -26,15 +27,13 @@ workflow {
 
   QualityCheck(
     BasecallingAndDemux.out.sequences,
-    BasecallingAndDemux.out.sequencing_summary
   )
-
-  CollectVersions()
 
   GenerateReports(
     QualityCheck.out.software_reports,
-    CollectVersions.out.software_versions,
-    CollectVersions.out.model_versions,
+    BasecallingAndDemux.out.sequencing_summary,
+    data_dir,
+    sample_names.map { it[0] }.collect()
     multiqc_config
   )
 }
