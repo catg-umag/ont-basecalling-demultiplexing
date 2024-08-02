@@ -2,7 +2,6 @@
 include { BasecallingAndDemux } from './subworkflows/basecalling_demux.nf'
 include { QualityCheck }        from './subworkflows/quality_check.nf'
 include { GenerateReports }     from './subworkflows/reports.nf'
-include { CollectVersions }     from './subworkflows/versions.nf'
 
 include { pathCheck } from './lib/groovy/utils.gvy'
 
