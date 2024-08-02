@@ -26,14 +26,14 @@ workflow {
   BasecallingAndDemux(sample_names, data_dir)
 
   QualityCheck(
-    BasecallingAndDemux.out.sequences,
+    BasecallingAndDemux.out.sequences
   )
 
   GenerateReports(
     QualityCheck.out.software_reports,
     BasecallingAndDemux.out.sequencing_summary,
     data_dir,
-    sample_names.map { it[0] }.collect()
+    sample_names.map { it[0] }.collect(),
     multiqc_config
   )
 }
