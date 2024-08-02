@@ -10,6 +10,8 @@ workflow GenerateReports {
     multiqc_config      // multiqc config file
 
   main:
+    Channel.topic('versions')
+      | view()
     // multiQC(software_reports, software_versions, model_versions, multiqc_config)
 }
 

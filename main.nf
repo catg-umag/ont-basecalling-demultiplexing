@@ -12,10 +12,10 @@ data_dir = pathCheck(params.data_dir, isDirectory = true)
 multiqc_config = pathCheck("${workflow.projectDir}/tool_conf/multiqc_config.yaml")
 
 if (params.skip_demultiplexing) {
-  sample_names = channel.fromList([])
+  sample_names = Channel.fromList([])
 } else {
   pathCheck(params.sample_data)
-  channel
+  Channel
     .fromPath(params.sample_data)
     .splitCsv(header: true)
     .map { row -> [row.barcode, row.sample] }
