@@ -24,17 +24,15 @@ if (params.skip_demultiplexing) {
 workflow {
   BasecallingAndDemux(sample_names, data_dir)
 
-  QualityCheck(
-    BasecallingAndDemux.out.sequences,
-    BasecallingAndDemux.out.sequencing_summary
-  )
+  QualityCheck(BasecallingAndDemux.out.sequences)
 
-  CollectVersions()
+  CollectVersions(BasecallingAndDemux.out.basecalled_ubam)
 
   GenerateReports(
     QualityCheck.out.software_reports,
     CollectVersions.out.software_versions,
     CollectVersions.out.model_versions,
+    BasecallingAndDemux.out.sequencing_summary,
     multiqc_config
   )
 }

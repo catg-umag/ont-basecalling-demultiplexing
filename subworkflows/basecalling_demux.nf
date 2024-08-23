@@ -4,10 +4,7 @@ workflow BasecallingAndDemux {
     data_dir      // directory containing POD5 files
 
   main:
-    basecalling(
-      data_dir,
-      downloadModel(params.dorado_basecalling_model)
-    )
+    basecalling(data_dir)
     qscoreFiltering(basecalling.out.reads)
       | mix
       | set { basecalled_reads_qscore_filtered }
@@ -38,24 +35,9 @@ workflow BasecallingAndDemux {
     }
 
   emit:
+    basecalled_ubam = basecalling.out.reads.map { it[1] }
     sequences = sequences_to_postprocess
     sequencing_summary = basecalling.out.sequencing_summary
-}
-
-
-process downloadModel {
-  label 'dorado'
-
-  input:
-  val(model_name)
-  
-  output:
-  path(model_name)
-  
-  script:
-  """
-  dorado download --model ${model_name}
-  """
 }
 
 
@@ -64,25 +46,27 @@ process basecalling {
   publishDir "${params.output_dir}/sequencing_info/", \
     pattern: 'sequencing_summary.txt', \
     mode: 'copy'
-  clusterOptions = "--gres=gpu:${params.dorado_basecalling_gpus}"
+  clusterOptions "--gres=gpu:${params.dorado_basecalling_gpus}"
   cpus { 4 * params.dorado_basecalling_gpus }
   memory "${16 * params.dorado_basecalling_gpus}G"
   
   input:
   path(data_dir)
-  path(basecalling_model)
 
   output:
   tuple val('basecalled'), path('basecalled.ubam'), emit: reads
   path('sequencing_summary.txt')                  , emit: sequencing_summary
 
   script:
+  kit_opt = params.skip_demultiplexing ? '' : "--kit-name ${params.dorado_demux_kit}"
   """
   dorado basecaller \
     --recursive \
     --device 'cuda:all' \
+    --trim adapters \
+    ${kit_opt} \
     ${params.dorado_basecalling_extra_config} \
-    ${basecalling_model} \
+    ${dorado_basecalling_model} \
     ${data_dir} \
   > basecalled.ubam
 
