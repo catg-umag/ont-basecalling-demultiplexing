@@ -1,48 +1,54 @@
 # ONT Basecalling / Demux Pipeline
 
-Small pipeline to perform basecalling and demultiplexing (optional) of ONT data, collect QC metrics and generate a MultiQC report.
-It uses Dorado for basecalling and demultiplexing.
+Small pipeline to perform basecalling and (optional) demultiplexing of ONT data, collect QC metrics and generate a MultiQC report.
+Uses Dorado for basecalling and demultiplexing.
 
 ## Requirements
 
 - [Nextflow](https://www.nextflow.io/) (>= 22.04)
 - [Apptainer](https://apptainer.org/) / Singularity
-- Dorado (0.5.3 tested). It can be used via container, or installed locally from https://github.com/nanoporetech/dorado.
+- Dorado (0.7.3 tested). It can be used via container, or installed locally from https://github.com/nanoporetech/dorado.
 
-## Usage
+## Quick Start
+1. Clone this repository:
+	```bash
+	git clone https://github.com/your-repo/ont-basecalling-demultiplexing.git
+	```
+2. Demultiplexing setup (optional):
+	- If demultiplexing is needed, create a samples.csv file containing at least the barcode and sample columns.
+	- Ensure the barcode column includes the barcode identifier (e.g., barcode01), and the sample column lists the sample name, which will be used in reports and as the FASTQ filename.
+3. Configure parameters:
+	- Copy the example parameters file:
+		```bash
+		cp params.example.yml my_params.yml
+		```
+	- Modify my_params.yml according to your needs. Ensure that the sample_data parameter points to your samples.csv file if you are demultiplexing.
+4. Run the pipeline:
+	```bash
+	nextflow run ont-basecalling-demultiplexing/ -profile apptainer -params-file my_params.yml
+	```
 
-- Clone this repository
-- **If you want to demultiplex:** create a `samples.csv` file with at least the `barcode` and `sample` columns. The `barcode` column should contain the barcode used for demultiplexing (with the leading zero, e.g. `barcode01`), and the `sample` column should contain the sample name (this name with be used on the report and as name for FASTQ file).
-- Copy `params.example.yml` (for example to `./my_params.yml`) and modify it according to your needs. Remember to point `sample_data` parameter to the file created at the previous step.
-- Run the pipeline passing your params file to `-params-file` option:
+## Pipeline Parameters
 
-```
-nextflow run ont-basecalling-demultiplexing/ -profile apptainer -params-file my_params.yml
-```
-
-## Parameters
-
-| Parameter                                | Required | Default                              | Description                                                                                                             |
-| ---------------------------------------- | -------- | ------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
-| `experiment_name`                        | False    | -                                    | Name of the experiment, used for final reports (title and filename).                                                    |
-| `data_dir`                               | True     | -                                    | Path to the folder containing the POD5 files.                                                                           |
-| `sample_data`                            | True     | `input/samples.csv`                  | Path to the CSV file containing the sample data (required if demultiplexing).                                           |
-| `output_dir`                             | False    | `demultiplex_results`                | Path to the folder where the results will be saved.                                                                     |
-| `fastq_output`                           | False    | `true`                               | If `true`, the pipeline will generate FASTQ files (if not, it would be UBAM files).                                     |
-| `qscore_filter`                          | False    | `10`                                 | Minimum QScore for the "pass" data, used for demultiplexing.                                                            |
-| `dorado_basecalling_model`               | False    | `dna_r10.4.1_e8.2_400bps_sup@v5.0.0` | Model used for basecalling.                                                                                             |
-| `dorado_basecalling_extra_config`        | False    | -                                    | Extra configuration for Dorado basecalling.                                                                             |
-| `dorado_basecalling_gpus`                | False    | `1`                                  | Number of GPUs to use for basecalling.                                                                                  |
-| `skip_demultiplexingskip_demultiplexing` | False    | `false`                              | If `true`, the pipeline will not perform demultiplexing                                                                 |
-| `dorado_demux_kit`                       | False    | `EXP-NBD196`                         | Kit used for demultiplexing.                                                                                            |
-| `dorado_demux_both_ends`                 | False    | `false`                              | If `true`, the pipeline will demultiplex using barcodes from both sides (5' and 3').                                    |
-| `dorado_demux_extra_config`              | False    | -                                    | Extra configuration for Dorado demultiplexing.                                                                          |
-| `dorado_demux_cpus`                      | False    | `16`                                 | Number of CPUs to use for demultiplexing.                                                                               |
-| `use_dorado_container`                   | False    | `true`                               | If `true`, the pipeline will use Dorado via container (~3.5GB download). If `false`, it will expect to find it locally. |
+| Parameter                         | Required | Default                            | Description                                                                                     |
+| --------------------------------- | -------- | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `experiment_name`                 | No       | -                                  | Name of the experiment, used for final reports (title and filename).                            |
+| `data_dir`                        | Yes      | -                                  | Path to the directory containing POD5 files.                                                    |
+| `sample_data`                     | Yes      | `input/samples.csv`                | Path to the CSV file containing the sample data (required if demultiplexing).                   |
+| `output_dir`                      | No       | `demultiplex_results`              | Directory for saving results.                                                                   |
+| `fastq_output`                    | No       | `true`                             | Generates FASTQ files if `true`; otherwise, generates UBAM files.                               |
+| `qscore_filter`                   | No       | `10`                               | Minimum QScore threshold for "pass" data, used in demultiplexing.                               |
+| `dorado_basecalling_model`        | No       | `sup`                              | Model used for basecalling.                                                                     |
+| `dorado_basecalling_extra_config` | No       | -                                  | Additional configuration options for Dorado basecalling.                                        |
+| `dorado_basecalling_gpus`         | No       | `1`                                | Number of GPUs to allocate for basecalling.                                                     |
+| `skip_demultiplexing`             | No       | `false`                            | Skips demultiplexing if `true`.                                                                 |
+| `dorado_demux_kit`                | No       | `EXP-NBD196`                       | Kit identifier used for demultiplexing.                                                         |
+| `dorado_demux_both_ends`          | No       | `false`                            | Demultiplexes using barcodes on both ends (5' and 3') if `true`.                                |
+| `dorado_demux_extra_config`       | No       | -                                  | Additional configuration options for Dorado demultiplexing.                                     |
+| `use_dorado_container`            | No       | `true`                             | Uses Dorado via container if `true`; expects a local installation if `false`.                   |
+| `qc_tools`                        | No       | `['fastqc', 'nanoq', 'toulligqc']` | Specifies which QC tools to run. Options: 'nanoq', 'nanoplot', 'fastqc', 'toulligqc', 'pycoqc'. |
 
 ## Considerations
 
-- It is possible to run the pipeline either in SLURM clusters using `-profile slurm`.
-- Basecalling and demultiplexing are performed on separated steps to allow for a better control of the resources used by each process, and to prevent a whole basecalling redo in case of a failure during demultiplexing, wrong kit specified, etc.
-- The basecalling process uses GPU, so make sure to have one available. If using SLURM, the job will be submitted with `--gres=gpu:X` option.
-- Demultiplexing step won't use GPU, only CPU.
+- The pipeline is compatible with SLURM clusters; use `-profile slurm`.
+- GPU resources are required for basecalling. On SLURM, ensure jobs request GPUs with the `--gres=gpu:X` option.
