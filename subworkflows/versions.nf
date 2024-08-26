@@ -1,9 +1,9 @@
 workflow CollectVersions {
-  input:
-    path basecalled_ubam
+  take:
+    basecalled_ubam
 
   main:
-    (dorado & samtools & fastQC & nanoPlot & pycoQC & toulligQC)
+    (dorado & samtools & fastQC & nanoq & nanoPlot & pycoQC & toulligQC)
       | mix
       | set { software_versions }
 
@@ -68,7 +68,20 @@ process nanoPlot {
 
   script:
   """
-  NanoPlot --version | grep -Eo '[0-9.]+')
+  NanoPlot --version | grep -Eo '[0-9.]+'
+  """
+}
+
+
+process nanoq {
+  label 'nanoq'
+
+  output:
+  tuple val('nanoq'), stdout
+
+  script:
+  """
+  nanoq --version | grep -Eo '[0-9.]+'
   """
 }
 
@@ -81,7 +94,7 @@ process pycoQC {
 
   script:
   """
-  pycoQC --version | grep -Eo '[0-9.]+')
+  pycoQC --version | grep -Eo '[0-9.]+'
   """
 }
 
@@ -112,6 +125,6 @@ process doradoModel {
   """
   model_version=\$(samtools view -H ${bam} | grep -Po '(?<=basecall_model=)([^ ]+)')
   echo "Software\tModel\tVersion" > dorado_model.tsv
-  echo "Dorado\tBasecalling\t${model_version}" >> dorado_model.tsv 
+  echo "Dorado\tBasecalling\t\${model_version}" >> dorado_model.tsv 
   """
 }

@@ -3,11 +3,11 @@ include { sanitizeFilename } from '../lib/groovy/utils.gvy'
 
 workflow QualityCheck {
   take:
-    sequences           // channel [name, fastq]
+    sequences   // channel [name, fastq]
 
   main:
     sequences
-      | (fastQC & nanoPlot)
+      | (fastQC & nanoPlot & nanoq)
       | mix
       | map { it[1] }
       | collect
@@ -20,7 +20,7 @@ workflow QualityCheck {
 
 process fastQC {
   label 'fastqc'
-  tag "${name}"
+  tag { name }
   publishDir "${params.output_dir}/qc/fastqc", mode: 'copy'
   cpus { 4 * task.attempt }
   memory { 8.GB * task.attempt }
@@ -46,7 +46,7 @@ process fastQC {
 
 process nanoPlot {
   label 'nanoplot'
-  tag "${name}"
+  tag { name }
   publishDir "${params.output_dir}/qc/nanoplot", mode: 'copy'
   cpus 4
 
@@ -68,4 +68,20 @@ process nanoPlot {
 }
 
 
+process nanoq {
+  label 'nanoq'
+  tag { name }
+  publishDir "${params.output_dir}/qc/nanoq", mode: 'copy'
+
+  input:
+  tuple val(name), path(reads)
+  
+  output:
+  tuple val(name), path("${name}.txt")
+  
+  script:
+  """
+  nanoq -svv -i ${reads} > ${name}.txt
+  """
+}
 
