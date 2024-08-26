@@ -4,25 +4,27 @@ include { QualityCheck }        from './subworkflows/quality_check.nf'
 include { GenerateReports }     from './subworkflows/reports.nf'
 include { CollectVersions }     from './subworkflows/versions.nf'
 
-include { pathCheck } from './lib/groovy/utils.gvy'
-
 
 // check and prepare input channels
-data_dir = pathCheck(params.data_dir, isDirectory = true)
-multiqc_config = pathCheck("${workflow.projectDir}/tool_conf/multiqc_config.yaml")
+data_dir = file(params.data_dir, checkIfExists: true, type: 'dir')
+multiqc_config = file("${workflow.projectDir}/tool_conf/multiqc_config.yaml", checkIfExists: true)
 
 if (params.skip_demultiplexing) {
-  sample_names = channel.fromList([])
+  samples = channel.fromList([])
 } else {
-  pathCheck(params.sample_data)
-  sample_names = channel
+  file(params.sample_data, checkIfExists: true)
+  channel
     .fromPath(params.sample_data)
     .splitCsv(header: true)
     .map { row -> [row.barcode, row.sample] }
+    .set { samples }
 }
 
+params.qc_tools = params.qc_tools.each { it.toLowerCase() }
+
+
 workflow {
-  BasecallingAndDemux(sample_names, data_dir)
+  BasecallingAndDemux(samples, data_dir)
 
   QualityCheck(BasecallingAndDemux.out.sequences)
 
@@ -33,6 +35,8 @@ workflow {
     CollectVersions.out.software_versions,
     CollectVersions.out.model_versions,
     BasecallingAndDemux.out.sequencing_summary,
+    samples.map { it[0] }.collect(),
+    data_dir,
     multiqc_config
   )
 }

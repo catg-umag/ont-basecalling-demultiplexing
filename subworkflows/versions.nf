@@ -8,8 +8,8 @@ workflow CollectVersions {
       | set { software_versions }
 
     software_versions
-      | collectFile( name: 'software_versions.yaml', newLine: false, sort: true) {
-          "${it[0]}: ${it[1]}"
+      | collectFile( name: 'software_versions.yaml', newLine: true, sort: true) {
+          "${it[0]}: \"${it[1]}\""
         }
       | set { software_versions_combined }
 
@@ -29,7 +29,7 @@ process dorado {
 
   script:
   """
-  dorado --version 2>&1
+  dorado --version 2>&1 | tr -d '\n'
   """
 }
 
@@ -42,7 +42,7 @@ process samtools {
 
   script:
   """
-  samtools --version | head -n 1 | grep -Eo '[0-9.]+'
+  samtools --version | head -n 1 | grep -Eo '[0-9.]+' | tr -d '\n'
   """
 }
 
@@ -50,12 +50,15 @@ process samtools {
 process fastQC {
   label 'fastqc'
 
+  when:
+  'fastqc' in params.qc_tools
+
   output:
   tuple val('FastQC'), stdout
 
   script:
   """
-  fastqc --version | grep -Eo '[0-9.]+'
+  fastqc --version | grep -Eo '[0-9.]+' | tr -d '\n'
   """
 }
 
@@ -63,12 +66,15 @@ process fastQC {
 process nanoPlot {
   label 'nanoplot'
 
+  when:
+  'nanoplot' in params.qc_tools
+
   output:
   tuple val('NanoPlot'), stdout
 
   script:
   """
-  NanoPlot --version | grep -Eo '[0-9.]+'
+  NanoPlot --version | grep -Eo '[0-9.]+' | tr -d '\n'
   """
 }
 
@@ -76,12 +82,15 @@ process nanoPlot {
 process nanoq {
   label 'nanoq'
 
+  when:
+  'nanoq' in params.qc_tools
+
   output:
   tuple val('nanoq'), stdout
 
   script:
   """
-  nanoq --version | grep -Eo '[0-9.]+'
+  nanoq --version | grep -Eo '[0-9.]+' | tr -d '\n'
   """
 }
 
@@ -89,25 +98,31 @@ process nanoq {
 process pycoQC {
   label 'pycoqc'
 
+  when:
+  'pycoqc' in params.qc_tools
+
   output:
   tuple val('PycoQC'), stdout
 
   script:
   """
-  pycoQC --version | grep -Eo '[0-9.]+'
+  pycoQC --version | grep -Eo '[0-9.]+' | tr -d '\n'
   """
 }
 
 
 process toulligQC {
   label 'toulligqc'
+
+  when:
+  'toulligqc' in params.qc_tools
   
   output:
   tuple val('ToulligQC'), stdout
   
   script:
   """
-  toulligqc --version
+  toulligqc --version | tr -d '\n'
   """
 }
 
@@ -123,7 +138,7 @@ process doradoModel {
   
   script:
   """
-  model_version=\$(samtools view -H ${bam} | grep -Po '(?<=basecall_model=)([^ ]+)')
+  model_version=\$(samtools view -H ${bam} | grep -Po '(?<=basecall_model=)([^ ]+)' | uniq)
   echo "Software\tModel\tVersion" > dorado_model.tsv
   echo "Dorado\tBasecalling\t\${model_version}" >> dorado_model.tsv 
   """

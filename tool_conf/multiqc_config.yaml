@@ -1,6 +1,7 @@
 read_count_multiplier: 0.001
 read_count_prefix: "K"
 read_count_desc: "thousands"
+disable_version_detection: true
 custom_data:
   model_versions:
     file_format: "tsv"
@@ -13,8 +14,8 @@ report_section_order:
   model_versions:
     before: "multiqc_software_versions"
 sample_names_replace:
-  pass: .all_pass
-  fail: .all_fail
+  pass: nodemux_pass
+  fail: nodemux_fail
 show_hide_buttons:
   - Not Demultiplexed
   - Demultiplexed
@@ -24,6 +25,6 @@ show_hide_mode:
   - hide
   - hide
 show_hide_patterns:
-  - [".all_pass", ".all_fail"]
-  - [".all_pass", ".all_fail"]
-  - [".all_pass", ".all_fail", "unclassified"]
+  - ["nodemux_pass", "nodemux_fail"]
+  - ["nodemux_pass", "nodemux_fail"]
+  - ["nodemux_pass", "nodemux_fail", "unclassified"]

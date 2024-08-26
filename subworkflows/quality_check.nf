@@ -1,4 +1,4 @@
-include { sanitizeFilename } from '../lib/groovy/utils.gvy'
+include { slugify } from '../lib/groovy/utils.gvy'
 
 
 workflow QualityCheck {
@@ -27,6 +27,9 @@ process fastQC {
   errorStrategy 'retry'
   maxRetries 3
 
+  when:
+  'fastqc' in params.qc_tools
+
   input:
   tuple val(name), path(reads)
 
@@ -50,6 +53,9 @@ process nanoPlot {
   publishDir "${params.output_dir}/qc/nanoplot", mode: 'copy'
   cpus 4
 
+  when:
+  'nanoplot' in params.qc_tools
+
   input:
   tuple val(name), path(reads)
 
@@ -72,6 +78,10 @@ process nanoq {
   label 'nanoq'
   tag { name }
   publishDir "${params.output_dir}/qc/nanoq", mode: 'copy'
+  cpus 1
+
+  when:
+  'nanoq' in params.qc_tools
 
   input:
   tuple val(name), path(reads)
@@ -84,4 +94,3 @@ process nanoq {
   nanoq -svv -i ${reads} > ${name}.txt
   """
 }
-
