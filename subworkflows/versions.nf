@@ -102,7 +102,7 @@ process pycoQC {
   'pycoqc' in params.qc_tools
 
   output:
-  tuple val('PycoQC'), stdout
+  tuple val('pycoQC'), stdout
 
   script:
   """
@@ -118,7 +118,7 @@ process toulligQC {
   'toulligqc' in params.qc_tools
   
   output:
-  tuple val('ToulligQC'), stdout
+  tuple val('toulligQC'), stdout
   
   script:
   """
