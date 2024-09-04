@@ -30,25 +30,23 @@ Uses Dorado for basecalling and demultiplexing.
 
 ## Pipeline Parameters
 
-| Parameter                         | Required | Default                            | Description                                                                                     |
-| --------------------------------- | -------- | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `experiment_name`                 | No       | -                                  | Name of the experiment, used for final reports (title and filename).                            |
-| `data_dir`                        | Yes      | -                                  | Path to the directory containing POD5 files.                                                    |
-| `sample_data`                     | Yes      | `input/samples.csv`                | Path to the CSV file containing the sample data (required if demultiplexing).                   |
-| `output_dir`                      | No       | `demultiplex_results`              | Directory for saving results.                                                                   |
-| `fastq_output`                    | No       | `true`                             | Generates FASTQ files if `true`; otherwise, generates UBAM files.                               |
-| `qscore_filter`                   | No       | `10`                               | Minimum QScore threshold for "pass" data, used in demultiplexing.                               |
-| `dorado_basecalling_model`        | No       | `sup`                              | Model used for basecalling. Check Dorado help for available options.                            |
-| `dorado_basecalling_extra_config` | No       | -                                  | Additional configuration options for Dorado basecalling.                                        |
-| `dorado_basecalling_gpus`         | No       | `1`                                | Number of GPUs to allocate for basecalling.                                                     |
-| `skip_demultiplexing`             | No       | `false`                            | Skips demultiplexing if `true`.                                                                 |
-| `dorado_demux_kit`                | No       | `EXP-NBD196`                       | Kit identifier used for demultiplexing.                                                         |
-| `dorado_demux_both_ends`          | No       | `false`                            | Demultiplexes using barcodes on both ends (5' and 3') if `true`.                                |
-| `dorado_demux_extra_config`       | No       | -                                  | Additional configuration options for Dorado demultiplexing.                                     |
-| `use_dorado_container`            | No       | `true`                             | Uses Dorado via container if `true`; expects a local installation if `false`.                   |
-| `qc_tools`                        | No       | `['fastqc', 'nanoq', 'toulligqc']` | Specifies which QC tools to run. Options: 'nanoq', 'nanoplot', 'fastqc', 'toulligqc', 'pycoqc'. |
+| Parameter                  | Required | Default                            | Description                                                                                     |
+| -------------------------- | -------- | ---------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `experiment_name`          | No       | -                                  | Name of the experiment, used for final reports (title and filename).                            |
+| `data_dir`                 | Yes      | -                                  | Path to the directory containing POD5 files.                                                    |
+| `sample_data`              | No       | -                                  | Path to the CSV file containing the sample data (if not provided, will not perform demux).      |
+| `output_dir`               | No       | `demultiplex_results`              | Directory for saving results.                                                                   |
+| `fastq_output`             | No       | `true`                             | Generates FASTQ files if `true`; otherwise, generates UBAM files.                               |
+| `qscore_filter`            | No       | `10`                               | Minimum QScore threshold for "pass" data, used in demultiplexing.                               |
+| `dorado_basecalling_model` | No       | `sup`                              | Model used for basecalling. Check Dorado help for available options.                            |
+| `dorado_basecalling_gpus`  | No       | `1`                                | Number of GPUs to allocate for basecalling.                                                     |
+| `dorado_demux_kit`         | No       | `EXP-NBD196`                       | Kit identifier used for demultiplexing.                                                         |
+| `dorado_demux_both_ends`   | No       | `false`                            | Demultiplexes using barcodes on both ends (5' and 3') if `true`.                                |
+| `use_dorado_container`     | No       | `true`                             | Uses Dorado via container if `true`; expects a local installation if `false`.                   |
+| `qc_tools`                 | No       | `['fastqc', 'nanoq', 'toulligqc']` | Specifies which QC tools to run. Options: 'nanoq', 'nanoplot', 'fastqc', 'toulligqc', 'pycoqc'. |
 
 ## Considerations
 
 - The pipeline is compatible with SLURM clusters; use `-profile slurm`.
 - GPU resources are required for basecalling. On SLURM, ensure jobs request GPUs with the `--gres=gpu:X` option.
+- You can provide extra args to dorado basecalling and demultiplexing using `ext.args`.

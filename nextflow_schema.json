@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com//master/nextflow_schema.json",
+  "title": " pipeline parameters",
+  "description": "",
+  "type": "object",
+  "properties": {
+    "experiment_name": {
+      "type": "string",
+      "description": "Name of the experiment, used for final reports (title and filename)."
+    },
+    "data_dir": {
+      "type": "string",
+      "description": "Path to the directory containing POD5 files.",
+      "format": "directory-path"
+    },
+    "sample_data": {
+      "type": "string",
+      "default": "input/samples.csv",
+      "format": "file-path",
+      "schema": "/assets/samples_data_schema.json",
+      "mimetype": "text/csv",
+      "description": "Path to the CSV file containing the sample data (if not provided, will not perform demux)."
+    },
+    "output_dir": {
+      "type": "string",
+      "default": "results/",
+      "description": "Directory for saving results."
+    },
+    "fastq_output": {
+      "type": "boolean",
+      "default": true,
+      "description": "Generates FASTQ files if `true`; otherwise, generates UBAM files."
+    },
+    "qscore_filter": {
+      "type": "integer",
+      "default": 10,
+      "description": "Minimum QScore threshold for \"pass\" data, used in demultiplexing."
+    },
+    "dorado_basecalling_model": {
+      "type": "string",
+      "default": "sup",
+      "description": "Model used for basecalling. Check Dorado help for available options."
+    },
+    "dorado_basecalling_gpus": {
+      "type": "integer",
+      "default": 1,
+      "description": "Number of GPUs to allocate for basecalling."
+    },
+    "dorado_demux_kit": {
+      "type": "string",
+      "default": "SQK-NBD114-96",
+      "description": "Kit identifier used for demultiplexing."
+    },
+    "dorado_demux_both_ends": {
+      "type": "boolean",
+      "description": "Demultiplexes using barcodes on both ends (5' and 3') if `true`."
+    },
+    "use_dorado_container": {
+      "type": "boolean",
+      "default": true,
+      "description": "Uses Dorado via container if `true`; expects a local installation if `false`."
+    },
+    "qc_tools": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["nanoq", "nanoplot", "fastqc", "toulligqc", "pycoqc"]
+      },
+      "description": "Specifies which QC tools to run."
+    }
+  },
+  "required": ["data_dir"]
+}

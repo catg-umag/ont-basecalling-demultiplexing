@@ -1,26 +1,22 @@
 #!/usr/bin/env nextflow
-include { BasecallingAndDemux } from './subworkflows/basecalling_demux.nf'
-include { QualityCheck }        from './subworkflows/quality_check.nf'
-include { GenerateReports }     from './subworkflows/reports.nf'
-include { CollectVersions }     from './subworkflows/versions.nf'
+include { validateParameters; samplesheetToList } from 'plugin/nf-schema'
+include { BasecallingAndDemux }                   from './subworkflows/basecalling_demux.nf'
+include { QualityCheck }                          from './subworkflows/quality_check.nf'
+include { GenerateReports }                       from './subworkflows/reports.nf'
+include { CollectVersions }                       from './subworkflows/versions.nf'
 
 
-// check and prepare input channels
-data_dir = file(params.data_dir, checkIfExists: true, type: 'dir')
+// validate and prepare input channels
+validateParameters()
+
+data_dir = file(params.data_dir, type: 'dir')
 multiqc_config = file("${workflow.projectDir}/tool_conf/multiqc_config.yaml", checkIfExists: true)
 
-if (params.skip_demultiplexing) {
-  samples = channel.fromList([])
+if (params.sample_data) {
+  samples = channel.fromList(samplesheetToList(params.sample_data, "assets/samples_data_schema.json"))
 } else {
-  file(params.sample_data, checkIfExists: true)
-  channel
-    .fromPath(params.sample_data)
-    .splitCsv(header: true)
-    .map { row -> [row.barcode, row.sample] }
-    .set { samples }
+  samples = channel.empty()
 }
-
-params.qc_tools = params.qc_tools.each { it.toLowerCase() }
 
 
 workflow {

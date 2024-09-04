@@ -17,9 +17,7 @@ workflow BasecallingAndDemux {
       basecalled_reads = basecalled_reads_qscore_filtered
     }
 
-    if (params.skip_demultiplexing) {
-      sequences_to_postprocess = basecalled_reads
-    } else {
+    if (params.sample_data) {
       demultiplexing(qscoreFiltering.out.reads_pass)
 
       demultiplexing.out.classified
@@ -32,6 +30,8 @@ workflow BasecallingAndDemux {
         | mix(demultiplexing.out.unclassified.map { ['unclassified', it] })
         | mix(basecalled_reads)
         | set { sequences_to_postprocess }
+    } else {
+      sequences_to_postprocess = basecalled_reads
     }
 
   emit:
@@ -58,17 +58,18 @@ process basecalling {
   path('sequencing_summary.txt')                  , emit: sequencing_summary
 
   script:
-  if (params.skip_demultiplexing) {
-    demux_opts = ''
-  } else {
+  if (params.sample_data) {
     demux_opts = "--kit-name ${params.dorado_demux_kit}"
     demux_opts += params.dorado_demux_both_ends ? ' --barcode-both-ends' : ''
+  } else {
+    demux_opts = ''
   }
+  extra_args = task.ext.args ?: ''
   """
   dorado basecaller \
     --recursive \
     --device 'cuda:all' \
-    ${params.dorado_basecalling_extra_config} \
+    ${extra_args} \
     ${params.dorado_basecalling_model} \
     ${demux_opts} \
     ${data_dir} \
@@ -84,7 +85,7 @@ process qscoreFiltering {
   publishDir "${params.output_dir}/basecalled/", \
     pattern: '*.bam', \
     mode: 'copy', \
-    enabled: params.skip_demultiplexing && !params.fastq_output
+    enabled: !params.sample_data && !params.fastq_output
   cpus 4
 
   input:
@@ -119,13 +120,14 @@ process demultiplexing {
 
   script:
   emit_fastq = params.fastq_output ? '--emit-fastq' : ''
+  extra_args = task.ext.args ?: ''
   """
   dorado demux \
     --output-dir demultiplexed/ \
     --no-classify \
     ${emit_fastq} \
     --threads ${task.cpus} \
-    ${params.dorado_demux_extra_config} \
+    ${extra_args} \
     ${basecalled_reads}
   """
 }

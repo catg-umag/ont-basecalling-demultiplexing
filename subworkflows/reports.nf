@@ -62,9 +62,14 @@ process toulligQC {
   tuple val('ToulligQC'), eval('toulligqc --version'), topic: versions
   
   script:
-  report_filename = "${slugify(params.experiment_name)}_toulligqc.html"
-  barcode_list = ["NB23", "NB24"]
-  barcodes_opt = !params.skip_demultiplexing && barcode_list
+  if (params.experiment_name) {
+    report_filename = "${slugify(params.experiment_name)}_toulligqc.html"
+    name_opt = "--report-name ${params.experiment_name}"
+  } else {
+    report_filename = "toulligqc.html"
+    name_opt = ''
+  }
+  barcodes_opt = params.sample_data && barcode_list
     ? "--barcoding --barcodes ${barcode_list.join(',')}"
     : ''
   """
@@ -74,8 +79,8 @@ process toulligQC {
     --sequencing-summary-source sequencing_summary.mod.txt \
     --pod5-source ${data_dir} \
     --html-report-path ${report_filename} \
-    --report-name ${params.experiment_name} \
     --qscore-threshold ${params.qscore_filter} \
+    ${name_opt} \
     ${barcodes_opt}
   """
 }
