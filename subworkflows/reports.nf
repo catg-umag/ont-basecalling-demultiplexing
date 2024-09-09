@@ -66,7 +66,7 @@ process toulligQC {
   script:
   if (params.experiment_name) {
     report_filename = "${slugify(params.experiment_name)}_toulligqc.html"
-    name_opt = "--report-name ${params.experiment_name}"
+    name_opt = "--report-name '${params.experiment_name}'"
   } else {
     report_filename = "toulligqc.html"
     name_opt = ''
