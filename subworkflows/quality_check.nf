@@ -22,9 +22,9 @@ process fastQC {
   label 'fastqc'
   tag { name }
   publishDir "${params.output_dir}/qc/fastqc", mode: 'copy'
-  cpus { 4 * task.attempt }
-  memory { 8.GB * task.attempt }
-  errorStrategy 'retry'
+  cpus { task.attempt == 1 ? 4 : 8 }
+  memory { 4.GB * (Math.pow(2, task.attempt - 1)) }
+  errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'finish' }
   maxRetries 3
 
   when:
@@ -42,7 +42,8 @@ process fastQC {
   fastqc \
     ${reads} \
     -o fastqc_${name} \
-    -t ${task.cpus} --memory ${task.memory.toGiga()}GB
+    -t ${task.cpus} \
+    --memory ${task.memory.toMega() / task.cpus}
   """
 }
 
@@ -52,6 +53,9 @@ process nanoPlot {
   tag { name }
   publishDir "${params.output_dir}/qc/nanoplot", mode: 'copy'
   cpus 4
+  memory { 8.GB * task.attempt }
+  errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'finish' }
+  maxRetries 3
 
   when:
   'nanoplot' in params.qc_tools
@@ -79,6 +83,7 @@ process nanoq {
   tag { name }
   publishDir "${params.output_dir}/qc/nanoq", mode: 'copy'
   cpus 1
+  memory 2.GB
 
   when:
   'nanoq' in params.qc_tools
