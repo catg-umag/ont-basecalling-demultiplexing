@@ -2,7 +2,7 @@ name: MultiQC to GitHub Container Registry
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths:
       - "containers/multiqc/*"
   workflow_dispatch:
