@@ -116,7 +116,7 @@ process demultiplexing {
 
   output:
   path('demultiplexed/*barcode*')    , emit: classified
-  path('demultiplexed/unclassified*'), emit: unclassified
+  path('demultiplexed/*unclassified*'), emit: unclassified
 
   script:
   emit_fastq = params.fastq_output ? '--emit-fastq' : ''
