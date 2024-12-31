@@ -1,47 +1,53 @@
-include { slugify } from '../lib/groovy/utils.gvy'
+include { slugify } from '../lib/nf/utils.nf'
 
 
 workflow QualityCheck {
   take:
-    sequences   // channel [name, fastq]
+  sequences // channel [[id: 'id', ...], fastq]
 
   main:
-    sequences
-      | (fastQC & nanoPlot & nanoq)
-      | mix
-      | map { it[1] }
-      | collect
-      | set { reports }
+  reports = channel.empty()
+
+  if ('fastqc' in params.qc_tools) {
+    fastQC(sequences)
+    reports = reports.mix(fastQC.out.reports)
+  }
+  if ('nanoplot' in params.qc_tools) {
+    nanoPlot(sequences)
+    reports = reports.mix(nanoPlot.out.reports)
+  }
+
+  if ('nanoq' in params.qc_tools) {
+    nanoq(sequences)
+    reports = reports.mix(nanoq.out.reports)
+  }
 
   emit:
-    software_reports = reports
+  software_reports = reports.map { it[1] }
 }
 
 
 process fastQC {
   label 'fastqc'
-  tag { name }
-  publishDir "${params.output_dir}/qc/fastqc", mode: 'copy'
+  tag { meta.id }
   cpus { task.attempt == 1 ? 4 : 8 }
-  memory { 4.GB * (Math.pow(2, task.attempt - 1)) }
+  memory { 4.GB * Math.pow(2, task.attempt - 1) }
   errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'finish' }
   maxRetries 3
 
-  when:
-  'fastqc' in params.qc_tools
-
   input:
-  tuple val(name), path(reads)
+  tuple val(meta), path(reads)
 
   output:
-  tuple val(name), path("fastqc_${name}")
+  tuple val(meta), path("fastqc_${meta.id}"), emit: reports
+  tuple val('FastQC'), eval("fastqc --version | grep -Eo '[0-9.]+' | tr -d '\n'"), topic: versions
 
   script:
   """
-  mkdir fastqc_${name}
+  mkdir fastqc_${meta.id}
   fastqc \
     ${reads} \
-    -o fastqc_${name} \
+    -o fastqc_${meta.id} \
     -t ${task.cpus} \
     --memory ${task.memory.toMega() / task.cpus}
   """
@@ -50,29 +56,25 @@ process fastQC {
 
 process nanoPlot {
   label 'nanoplot'
-  tag { name }
-  publishDir "${params.output_dir}/qc/nanoplot", mode: 'copy'
+  tag { meta.id }
   cpus 4
   memory { 8.GB * task.attempt }
   errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'finish' }
   maxRetries 3
 
-  when:
-  'nanoplot' in params.qc_tools
-
   input:
-  tuple val(name), path(reads)
+  tuple val(meta), path(reads)
 
   output:
-  tuple val(name), path("nanoplot_${name}")
+  tuple val(meta), path("nanoplot_${meta.id}"), emit: reports
+  tuple val('NanoPlot'), eval("NanoPlot --version | grep -Eo '[0-9.]+' | tr -d '\n'"), topic: versions
 
   script:
-  file_opt = reads.name.endsWith('.ubam') ? '--ubam' : '--fastq'
   """
   NanoPlot \
-    ${file_opt} ${reads} \
-    --outdir nanoplot_${name} \
-    --prefix ${name}_ \
+    --fastq ${reads} \
+    --outdir nanoplot_${meta.id} \
+    --prefix ${meta.id}_ \
     --threads ${task.cpus}
   """
 }
@@ -80,22 +82,19 @@ process nanoPlot {
 
 process nanoq {
   label 'nanoq'
-  tag { name }
-  publishDir "${params.output_dir}/qc/nanoq", mode: 'copy'
+  tag { meta.id }
   cpus 1
   memory 2.GB
 
-  when:
-  'nanoq' in params.qc_tools
-
   input:
-  tuple val(name), path(reads)
-  
+  tuple val(meta), path(reads)
+
   output:
-  tuple val(name), path("${name}.txt")
-  
+  tuple val(meta), path("${meta.id}.txt"), emit: reports
+  tuple val('nanoq'), eval("nanoq --version | grep -Eo '[0-9.]+' | tr -d '\n'"), topic: versions
+
   script:
   """
-  nanoq -svv -i ${reads} > ${name}.txt
+  nanoq -svv -i ${reads} > ${meta.id}.txt
   """
 }

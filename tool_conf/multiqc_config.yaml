@@ -13,9 +13,6 @@ sp:
 report_section_order:
   model_versions:
     before: "multiqc_software_versions"
-sample_names_replace:
-  pass: nodemux_pass
-  fail: nodemux_fail
 show_hide_buttons:
   - Not Demultiplexed
   - Demultiplexed
@@ -25,6 +22,6 @@ show_hide_mode:
   - hide
   - hide
 show_hide_patterns:
-  - ["nodemux_pass", "nodemux_fail"]
-  - ["nodemux_pass", "nodemux_fail"]
-  - ["nodemux_pass", "nodemux_fail", "unclassified"]
+  - ["basecalled_pass", "basecalled_fail"]
+  - ["basecalled_pass", "basecalled_fail"]
+  - ["basecalled_pass", "basecalled_fail", "unclassified"]

@@ -1,0 +1,7 @@
+[*.nf]
+indent_style = space
+indent_size = 2
+
+[*.config]
+indent_style = space
+indent_size = 2
