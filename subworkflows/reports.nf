@@ -1,46 +1,34 @@
-include { slugify } from '../lib/groovy/utils.gvy'
+include { slugify } from '../lib/nf/utils.nf'
 
 
 workflow GenerateReports {
   take:
-    software_reports    // channel [file] | SW reports
-    software_versions   // channel [file] | SW versions file
-    model_versions      // channel [file] | SW model versions file
-    sequencing_summary  // channel [file] | Sequencing summary file
-    barcodes            // list [barcode]
-    pod5_data           // directory containing POD5 files
-    multiqc_config      // multiqc config file
+  software_reports   // channel [file] | SW reports
+  sequencing_summary // channel [file] | Sequencing summary file
+  barcodes           // list [barcode]
+  pod5_data          // directory containing POD5 files
+  multiqc_config     // multiqc config file
 
   main:
-    multiQC(software_reports, software_versions.collect(), model_versions.collect(), multiqc_config)
+  software_versions = channel
+    .topic('versions')
+    .unique()
+    .collectFile(name: 'software_versions.yaml', newLine: true, sort: true) { tool, version ->
+      "${tool}: \"${version}\""
+    }
+    .collect()
+  model_versions = channel
+    .topic('model_versions')
+    .collect()
+
+  if ('pycoqc' in params.qc_tools) {
     pycoQC(sequencing_summary)
-    toulligQC(pod5_data, sequencing_summary, barcodes)
-}
-
-
-process multiQC {
-  label 'multiqc'
-  publishDir "${params.output_dir}/reports/multiqc", mode: 'copy'
-  
-  input:
-  path(reports, stageAs: 'reports/*')
-  path('reports/versions/ont_demux_*_mqc_versions.yaml')
-  path('reports/model_versions/model_versions_*.tsv')
-  path('multiqc_config.yaml')
-
-  output:
-  tuple path('*multiqc_data'), path('*multiqc*.html')
-
-  script:
-  if (params.experiment_name) {
-    filename = slugify("${params.experiment_name}_multiqc")
-    title_opts = "--title '${params.experiment_name} Report' --filename ${filename}"
-  } else {
-    title_opts = ''
   }
-  """
-  multiqc ${title_opts} reports
-  """
+  if ('toulligqc' in params.qc_tools) {
+    toulligQC(pod5_data, sequencing_summary, barcodes)
+  }
+
+  multiQC(software_reports.collect(), software_versions, model_versions, multiqc_config)
 }
 
 
@@ -51,23 +39,21 @@ process toulligQC {
   errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'finish' }
   maxRetries 3
 
-  when:
-  'toulligqc' in params.qc_tools
-
   input:
-  path(data_dir)
-  path('sequencing_summary.txt')
-  val(barcode_list)
-  
+  path data_dir
+  path 'sequencing_summary.txt'
+  val barcode_list
+
   output:
-  path(report_filename)
+  path report_filename
   tuple val('ToulligQC'), eval('toulligqc --version'), topic: versions
-  
+
   script:
   if (params.experiment_name) {
     report_filename = "${slugify(params.experiment_name)}_toulligqc.html"
     name_opt = "--report-name '${params.experiment_name}'"
-  } else {
+  }
+  else {
     report_filename = "toulligqc.html"
     name_opt = ''
   }
@@ -95,15 +81,13 @@ process pycoQC {
   errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'terminate' }
   maxRetries 3
 
-  when:
-  'pycoqc' in params.qc_tools
-
   input:
-  path(sequencing_summary)
-  
+  path sequencing_summary
+
   output:
-  path('pycoQC_report.html')
-  
+  path 'pycoQC_report.html'
+  tuple val('pycoQC'), eval("pycoQC --version | grep -Eo '[0-9.]+' | tr -d '\n'"), topic: versions
+
   script:
   title_opt = params.experiment_name
     ? "--report_title '${params.experiment_name} Sequencing Report'"
@@ -113,5 +97,32 @@ process pycoQC {
     -f ${sequencing_summary} \
     ${title_opt} \
     -o pycoQC_report.html
+  """
+}
+
+
+process multiQC {
+  label 'multiqc'
+  publishDir "${params.output_dir}/reports/multiqc", mode: 'copy'
+
+  input:
+  path reports, stageAs: 'reports/*'
+  path 'reports/versions/ont_demux_*_mqc_versions.yaml'
+  path 'reports/model_versions/model_versions_*.tsv'
+  path 'multiqc_config.yaml'
+
+  output:
+  tuple path('*multiqc_data'), path('*multiqc*.html')
+
+  script:
+  if (params.experiment_name) {
+    filename = slugify("${params.experiment_name}_multiqc")
+    title_opts = "--title '${params.experiment_name} Report' --filename ${filename}"
+  }
+  else {
+    title_opts = ''
+  }
+  """
+  multiqc ${title_opts} reports
   """
 }
