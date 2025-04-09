@@ -3,7 +3,7 @@ data_dir: input/pod5/
 sample_data: input/samples.csv
 output_dir: demultiplex_results/
 fastq_output: true
-qscore_filter: 10
+qscore_filter: 12
 dorado_basecalling_model: sup
 dorado_basecalling_gpus: 1
 dorado_demux_kit: SQK-NBD114-96
