@@ -34,7 +34,7 @@
     },
     "qscore_filter": {
       "type": "integer",
-      "default": 10,
+      "default": 12,
       "description": "Minimum QScore threshold for \"pass\" data, used in demultiplexing."
     },
     "dorado_basecalling_model": {
