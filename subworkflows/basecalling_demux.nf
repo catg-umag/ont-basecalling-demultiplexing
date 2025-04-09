@@ -76,6 +76,7 @@ process basecalling {
   dorado basecaller \\
     --recursive \\
     --device 'cuda:all' \\
+    --trim adapters \\
     ${extra_args} \\
     ${params.dorado_basecalling_model} \\
     ${data_dir} \\
