@@ -37,7 +37,7 @@ Uses Dorado for basecalling and demultiplexing.
 | `sample_data`              | No       | -                                  | Path to the CSV file containing the sample data (if not provided, will not perform demultiplexing). |
 | `output_dir`               | No       | `results`                          | Directory for saving results.                                                                       |
 | `fastq_output`             | No       | `true`                             | Generates FASTQ files if `true`; otherwise, generates UBAM files.                                   |
-| `qscore_filter`            | No       | `10`                               | Minimum QScore threshold for "pass" data, used in demultiplexing.                                   |
+| `qscore_filter`            | No       | `12`                               | Minimum QScore threshold for "pass" data, used in demultiplexing.                                   |
 | `dorado_basecalling_model` | No       | `sup`                              | Model used for basecalling. Check Dorado help for available options.                                |
 | `dorado_basecalling_gpus`  | No       | `1`                                | Number of GPUs to allocate for basecalling.                                                         |
 | `dorado_demux_kit`         | No       | `EXP-NBD196`                       | Kit identifier used for demultiplexing.                                                             |
