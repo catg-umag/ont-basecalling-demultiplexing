@@ -5,7 +5,7 @@ Uses Dorado for basecalling and demultiplexing.
 
 ## Requirements
 
-- [Nextflow](https://www.nextflow.io/) (>= 24.04)
+- [Nextflow](https://www.nextflow.io/) (>= 25.04)
 - [Apptainer](https://apptainer.org/) / Singularity
 - Dorado (0.9.0 tested). It can be used via container, or installed locally from https://github.com/nanoporetech/dorado.
 
