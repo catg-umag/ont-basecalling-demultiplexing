@@ -16,7 +16,6 @@
     },
     "sample_data": {
       "type": "string",
-      "default": "input/samples.csv",
       "format": "file-path",
       "schema": "/assets/samples_data_schema.json",
       "mimetype": "text/csv",
@@ -26,6 +25,12 @@
       "type": "string",
       "default": "results/",
       "description": "Directory for saving results."
+    },
+    "basecalled_input": {
+      "type": "boolean",
+      "default": false,
+      "description": "Specifies if the input data is already basecalled.",
+      "help": "If `true` and `sample_data` provided, pipeline will expect that `data_dir` contains barcodeXX directories with basecalled data (`.fastq.gz`)."
     },
     "fastq_output": {
       "type": "boolean",

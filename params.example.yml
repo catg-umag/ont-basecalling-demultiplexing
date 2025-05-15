@@ -2,6 +2,7 @@ experiment_name: ''
 data_dir: input/pod5/
 sample_data: input/samples.csv
 output_dir: demultiplex_results/
+basecalled_input: false
 fastq_output: true
 qscore_filter: 12
 dorado_basecalling_model: sup

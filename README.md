@@ -1,11 +1,15 @@
 # ONT Basecalling / Demux Pipeline
 
-Nextflow pipeline to perform basecalling and (optional) demultiplexing of ONT data, collect QC metrics and generate a MultiQC report.
+Nextflow pipeline to perform basecalling and (optional) demultiplexing of ONT data, collect QC metrics, and generate a MultiQC report.
 Uses Dorado for basecalling and demultiplexing.
+
+It's also possible to use the pipeline with data that has already been basecalled and/or demultiplexed (e.g., with MinKNOW).
+In this case, the pipeline will only perform QC and generate a MultiQC report.
+For this, set the `basecalled_input` parameter to `true` and provide the path to the basecalled data (usually `fastq_pass`).
 
 ## Requirements
 
-- [Nextflow](https://www.nextflow.io/) (>= 24.04)
+- [Nextflow](https://www.nextflow.io/) (>= 25.04)
 - [Apptainer](https://apptainer.org/) / Singularity
 - Dorado (0.9.0 tested). It can be used via container, or installed locally from https://github.com/nanoporetech/dorado.
 
@@ -36,6 +40,7 @@ Uses Dorado for basecalling and demultiplexing.
 | `data_dir`                 | Yes      | -                                  | Path to the directory containing POD5 files.                                                        |
 | `sample_data`              | No       | -                                  | Path to the CSV file containing the sample data (if not provided, will not perform demultiplexing). |
 | `output_dir`               | No       | `results`                          | Directory for saving results.                                                                       |
+| `basecalled_input`         | No       | `false`                            | Specifies if the input data is already basecalled.                                                  |
 | `fastq_output`             | No       | `true`                             | Generates FASTQ files if `true`; otherwise, generates UBAM files.                                   |
 | `qscore_filter`            | No       | `12`                               | Minimum QScore threshold for "pass" data, used in demultiplexing.                                   |
 | `dorado_basecalling_model` | No       | `sup`                              | Model used for basecalling. Check Dorado help for available options.                                |
@@ -49,4 +54,4 @@ Uses Dorado for basecalling and demultiplexing.
 
 - The pipeline is compatible with SLURM clusters; use `-profile slurm`.
 - GPU resources are required for basecalling. On SLURM, this pipeline will send jobs requesting GPUs with the `--gres=gpu:X` option.
-- You can provide extra args to dorado basecalling and demultiplexing using `ext.args`.
+- You can provide extra arguments to Dorado basecalling and demultiplexing using `ext.args`.
