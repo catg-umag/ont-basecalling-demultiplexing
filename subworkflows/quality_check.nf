@@ -6,7 +6,7 @@ workflow QualityCheck {
   sequences // channel [[id: 'id', ...], fastq]
 
   main:
-  ch_reports = Channel.empty()
+  ch_reports = channel.empty()
 
   if ('fastqc' in params.qc_tools) {
     fastQC(sequences)

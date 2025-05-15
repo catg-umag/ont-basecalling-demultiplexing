@@ -5,7 +5,7 @@ workflow SequenceCollection {
 
   main:
   if (params.sample_data) {
-    ch_barcode_files = Channel.from(data_dir.listFiles())
+    ch_barcode_files = channel.of(data_dir.listFiles())
       .map { dir -> [dir.name, dir] }
       .join(sample_names.map { sample -> [sample[0].barcode] + sample }, remainder: true)
       .branch { _barcode, dir, meta ->
@@ -19,7 +19,7 @@ workflow SequenceCollection {
     )
   }
   else {
-    ch_sequences_to_collect = Channel.from([[['id': 'basecalled'], data_dir]])
+    ch_sequences_to_collect = channel.value([['id': 'basecalled'], data_dir])
   }
 
   concatFastq(ch_sequences_to_collect)

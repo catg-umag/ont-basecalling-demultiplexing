@@ -26,18 +26,18 @@ workflow {
   multiqc_config = file("${workflow.projectDir}/tool_conf/multiqc_config.yaml", checkIfExists: true)
 
   if (params.sample_data) {
-    samples = Channel.fromList(samplesheetToList(params.sample_data, "assets/samples_data_schema.json"))
+    samples = channel.fromList(samplesheetToList(params.sample_data, "assets/samples_data_schema.json"))
       .map { row -> [[id: row[1], barcode: row[0]]] }
   }
   else {
-    samples = Channel.empty()
+    samples = channel.empty()
   }
 
 
   if (params.basecalled_input) {
     SequenceCollection(samples, data_dir)
     sequences = SequenceCollection.out.sequences
-    sequencing_summary = Channel.empty()
+    sequencing_summary = channel.empty()
   }
   else {
     BasecallingAndDemux(samples, data_dir)

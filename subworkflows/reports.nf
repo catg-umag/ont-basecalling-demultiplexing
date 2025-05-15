@@ -10,13 +10,13 @@ workflow GenerateReports {
   multiqc_config     // multiqc config file
 
   main:
-  ch_software_versions = Channel.topic('versions')
+  ch_software_versions = channel.topic('versions')
     .unique()
     .collectFile(name: 'software_versions.yaml', newLine: true, sort: true) { tool, version ->
       "${tool}: \"${version}\""
     }
     .collect()
-  ch_model_versions = Channel.topic('model_versions')
+  ch_model_versions = channel.topic('model_versions')
     .collect()
     .ifEmpty([])
 
