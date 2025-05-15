@@ -19,7 +19,7 @@ workflow SequenceCollection {
     )
   }
   else {
-    ch_sequences_to_collect = [[['id': 'basecalled'], data_dir]]
+    ch_sequences_to_collect = Channel.from([[['id': 'basecalled'], data_dir]])
   }
 
   concatFastq(ch_sequences_to_collect)
