@@ -8,13 +8,13 @@ workflow BasecallingAndDemux {
   getDoradoModel(basecalling.out.reads.map { it[1] })
   qscoreFiltering(basecalling.out.reads)
 
-  sequences_for_qc = qscoreFiltering.out.reads_pass.mix(qscoreFiltering.out.reads_fail)
+  ch_sequences_for_qc = qscoreFiltering.out.reads_pass.mix(qscoreFiltering.out.reads_fail)
 
   if (params.sample_data) {
     /* Demultiplexing */
     demultiplexing(qscoreFiltering.out.reads_pass)
 
-    classified_reads = demultiplexing.out.classified
+    ch_classified_reads = demultiplexing.out.classified
       .flatMap { exp ->
         exp.collect { file ->
           [(file.name =~ /barcode[0-9]+/)[0], file]
@@ -24,8 +24,8 @@ workflow BasecallingAndDemux {
       .map { [it[2], it[1]] }
       .map { meta, file -> [meta + [step: 'demux', classified: true], file] }
 
-    sequences_for_qc = sequences_for_qc
-      .mix(classified_reads)
+    ch_sequences_for_qc = ch_sequences_for_qc
+      .mix(ch_classified_reads)
       .mix(
         demultiplexing.out.unclassified.map { file ->
           [[id: 'unclassified', step: 'demux', classified: false], file]
@@ -36,23 +36,23 @@ workflow BasecallingAndDemux {
       basecalling.out.sequencing_summary,
       demultiplexing.out.summary,
     )
-    sequencing_summary = mergeDoradoSummaries.out.summary
+    ch_sequencing_summary = mergeDoradoSummaries.out.summary
   }
   else {
-    sequencing_summary = basecalling.out.sequencing_summary
+    ch_sequencing_summary = basecalling.out.sequencing_summary
   }
 
   // If FASTQ output is disabled, rename the BAM files
   if (!params.fastq_output) {
-    renameUbam(sequences_for_qc)
+    renameUbam(ch_sequences_for_qc)
   }
 
   // QC tools only support FASTQ files, so convertion is always neccessary
-  bamToFastq(sequences_for_qc)
+  bamToFastq(ch_sequences_for_qc)
 
   emit:
   sequences          = bamToFastq.out.fastq
-  sequencing_summary = sequencing_summary
+  sequencing_summary = ch_sequencing_summary
 }
 
 

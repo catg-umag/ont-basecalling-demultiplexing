@@ -10,25 +10,31 @@ workflow GenerateReports {
   multiqc_config     // multiqc config file
 
   main:
-  software_versions = channel
-    .topic('versions')
+  ch_software_versions = Channel.topic('versions')
     .unique()
     .collectFile(name: 'software_versions.yaml', newLine: true, sort: true) { tool, version ->
       "${tool}: \"${version}\""
     }
     .collect()
-  model_versions = channel
-    .topic('model_versions')
+  ch_model_versions = Channel.topic('model_versions')
     .collect()
+    .ifEmpty([])
 
-  if ('pycoqc' in params.qc_tools) {
-    pycoQC(sequencing_summary)
-  }
-  if ('toulligqc' in params.qc_tools) {
-    toulligQC(pod5_data, sequencing_summary, barcodes)
+  if (!params.basecalled_input) {
+    if ('pycoqc' in params.qc_tools) {
+      pycoQC(sequencing_summary)
+    }
+    if ('toulligqc' in params.qc_tools) {
+      toulligQC(pod5_data, sequencing_summary, barcodes)
+    }
   }
 
-  multiQC(software_reports.collect(), software_versions, model_versions, multiqc_config)
+  multiQC(
+    software_reports.collect(),
+    ch_software_versions,
+    ch_model_versions,
+    multiqc_config,
+  )
 }
 
 

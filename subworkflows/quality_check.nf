@@ -6,24 +6,24 @@ workflow QualityCheck {
   sequences // channel [[id: 'id', ...], fastq]
 
   main:
-  reports = channel.empty()
+  ch_reports = Channel.empty()
 
   if ('fastqc' in params.qc_tools) {
     fastQC(sequences)
-    reports = reports.mix(fastQC.out.reports)
+    ch_reports = ch_reports.mix(fastQC.out.reports)
   }
   if ('nanoplot' in params.qc_tools) {
     nanoPlot(sequences)
-    reports = reports.mix(nanoPlot.out.reports)
+    ch_reports = ch_reports.mix(nanoPlot.out.reports)
   }
 
   if ('nanoq' in params.qc_tools) {
     nanoq(sequences)
-    reports = reports.mix(nanoq.out.reports)
+    ch_reports = ch_reports.mix(nanoq.out.reports)
   }
 
   emit:
-  software_reports = reports.map { it[1] }
+  software_reports = ch_reports.map { it[1] }
 }
 
 
