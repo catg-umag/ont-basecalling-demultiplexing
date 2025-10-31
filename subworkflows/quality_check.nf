@@ -23,7 +23,7 @@ workflow QualityCheck {
     }
 
     emit:
-    software_reports = ch_reports.map { it[1] }
+    software_reports = ch_reports.map { _meta, report -> report }
 }
 
 

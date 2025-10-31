@@ -1,11 +1,11 @@
 workflow BasecallingAndDemux {
     take:
-    sample_names // channel [barcode, sample]
+    sample_names // channel [id: sample, barcode: barcode]
     data_dir     // directory containing POD5 files
 
     main:
     basecalling(data_dir)
-    getDoradoModel(basecalling.out.reads.map { it[1] })
+    getDoradoModel(basecalling.out.reads.map { _meta, ubam -> ubam })
     qscoreFiltering(basecalling.out.reads)
 
     ch_sequences_for_qc = qscoreFiltering.out.reads_pass.mix(qscoreFiltering.out.reads_fail)
@@ -21,8 +21,7 @@ workflow BasecallingAndDemux {
                 }
             }
             .join(sample_names.map { sample -> [sample[0].barcode] + sample })
-            .map { [it[2], it[1]] }
-            .map { meta, file -> [meta + [step: 'demux', classified: true], file] }
+            .map { _barcode, file, meta -> [meta + [step: 'demux', classified: true], file] }
 
         ch_sequences_for_qc = ch_sequences_for_qc
             .mix(ch_classified_reads)
