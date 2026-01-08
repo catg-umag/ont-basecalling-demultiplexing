@@ -196,6 +196,10 @@ process getDoradoModel {
 
 process mergeDoradoSummaries {
     label 'csvtk'
+    afterScript "rm -f *.tmp"
+    memory { 8.GB * Math.pow(2, task.attempt - 1) }
+    errorStrategy { task.exitStatus in 137..140 ? 'retry' : 'finish' }
+    maxRetries 4
 
     input:
     path sequencing_summary, stageAs: 'input/sequencing_summary.txt'
@@ -212,15 +216,16 @@ process mergeDoradoSummaries {
     # and fix empty barcode values
     csvtk cut -t \\
         --fields -barcode \\
-        ${sequencing_summary} \\
-    | csvtk join -t \\
+        ${sequencing_summary} > sequencing_summary.tmp
+    csvtk join -t \\
         --left-join \\
         --fields 'filename,read_id' \\
-        - ${barcoding_summary} \\
-    | csvtk replace -t \\
+        sequencing_summary.tmp ${barcoding_summary} > joined_summary.tmp
+    csvtk replace -t \\
         --fields barcode \\
         --pattern '^\$' \\
         --replacement 'unclassified' \\
-        --out-file sequencing_summary.txt
-    """
+        --out-file sequencing_summary.txt \\
+        joined_summary.tmp
+  """
 }
